@@ -1,0 +1,13 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+
+<h1>Delete Task</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <p>Are you sure?</p>
+    <button type="submit">Yes</button>
+</form>
+
+<a href="{% url 'task_list' %}">Cancel</a>
