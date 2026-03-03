@@ -101,4 +101,4 @@ jobs:
         env:
           DJANGO_SETTINGS_MODULE: config.settings
         run: |
-          docker-compose exec web bash -c "python manage.py collectstatic --noinput"
+          docker compose exec web bash -c "python manage.py collectstatic --noinput"
