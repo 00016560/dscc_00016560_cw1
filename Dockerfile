@@ -10,18 +10,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the entire project
 COPY . .
 
-# Create directory for static files and set permissions
-RUN mkdir -p /app/staticfiles /app/media && \
+# Create user and set permissions in one layer
+RUN adduser --disabled-password --gecos '' appuser && \
+    mkdir -p /app/staticfiles /app/media && \
     chown -R appuser:appuser /app && \
     chmod -R 755 /app
 
-# Add user
-RUN adduser --disabled-password --gecos '' appuser
-
-# Collect static files during build (as root)
+# Collect static files during build (still as root in this layer)
 RUN python manage.py collectstatic --noinput
 
-# Change ownership after collecting static files
+# Ensure collected static files have correct ownership
 RUN chown -R appuser:appuser /app/staticfiles /app/media
 
 # Switch to non-root user
