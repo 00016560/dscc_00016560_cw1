@@ -25,6 +25,7 @@ services:
     depends_on:
       - db
     restart: always
+    user: root
 
   nginx:
     image: nginx:latest
