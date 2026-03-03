@@ -18,9 +18,6 @@ RUN adduser --disabled-password --gecos '' appuser && \
     chown -R appuser:appuser /app && \
     chmod -R 755 /app
 
-# Collect static files during build (still as root in this layer)
-RUN python manage.py collectstatic --noinput
-
 # Ensure collected static files have correct ownership
 RUN chown -R appuser:appuser /app/staticfiles /app/media
 
