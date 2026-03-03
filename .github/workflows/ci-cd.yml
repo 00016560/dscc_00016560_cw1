@@ -74,31 +74,36 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/dscc_00016560_cw1:latest
 
   deploy:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    needs: docker-build
+    name: Deploy application
+    env:
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      HOST: ${{ secrets.HOST }}
+      USER: ${{ secrets.USER }}
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+    run: |
+      mkdir -p ~/.ssh
+      echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+      chmod 600 ~/.ssh/id_rsa
+      ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
 
-    steps:
-      - name: Deploy application
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          HOST: ${{ secrets.HOST }}
-          USER: ${{ secrets.USER }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
-
-          ssh $USER@$HOST << 'EOF'
-            cd /opt/tickwise
-            docker pull ${{ secrets.DOCKER_USERNAME }}/dscc_00016560_cw1:latest
-            docker compose down
-            docker compose up -d
-          EOF
-
-      - name: Collect static files inside web container
-        env:
-          DJANGO_SETTINGS_MODULE: config.settings
-        run: |
-          docker compose exec web bash -c "python manage.py collectstatic --noinput"
+      ssh $USER@$HOST << 'ENDSSH'
+        cd /opt/tickwise
+        
+        # Pull latest image
+        docker pull ${{ secrets.DOCKER_USERNAME }}/dscc_00016560_cw1:latest
+        
+        # Stop and remove old containers
+        docker compose down
+        
+        # Start new containers
+        docker compose up -d
+        
+        # Run migrations (if needed)
+        docker compose exec -T web python manage.py migrate --noinput
+        
+        # Collect static files
+        docker compose exec -T web python manage.py collectstatic --noinput
+        
+        # Check if containers are running
+        docker compose ps
+      ENDSSH
