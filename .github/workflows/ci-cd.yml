@@ -91,6 +91,7 @@ jobs:
           ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
 
           ssh $USER@$HOST << 'EOF'
+            cd /opt/tickwise
             docker pull ${{ secrets.DOCKER_USERNAME }}/dscc_00016560_cw1:latest
             docker compose down
             docker compose up -d
