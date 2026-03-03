@@ -20,6 +20,8 @@ services:
       - media_volume:/app/media
     env_file:
       - .env
+    environment:
+    - ALLOWED_HOSTS=74.248.233.128,tickwise.polandcentral.cloudapp.azure.com,localhost,127.0.0.1
     depends_on:
       - db
     restart: always
