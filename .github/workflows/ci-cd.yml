@@ -97,9 +97,8 @@ jobs:
             docker compose up -d
           EOF
 
-      - name: Collect static files
+      - name: Collect static files inside web container
         env:
           DJANGO_SETTINGS_MODULE: config.settings
-        working-directory: /home/runner/work/dscc_00016560_cw1
         run: |
-          python manage.py collectstatic --noinput
+          docker-compose exec web bash -c "python manage.py collectstatic --noinput"
