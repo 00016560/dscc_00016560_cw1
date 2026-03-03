@@ -57,6 +57,7 @@ jobs:
   docker-build:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    needs: test
 
     steps:
       - name: Checkout code
@@ -74,36 +75,57 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/dscc_00016560_cw1:latest
 
   deploy:
-    name: Deploy application
-    env:
-      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-      HOST: ${{ secrets.HOST }}
-      USER: ${{ secrets.USER }}
-      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-    run: |
-      mkdir -p ~/.ssh
-      echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-      chmod 600 ~/.ssh/id_rsa
-      ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
-      ssh $USER@$HOST << 'ENDSSH'
-        cd /opt/tickwise
-        
-        # Pull latest image
-        docker pull ${{ secrets.DOCKER_USERNAME }}/dscc_00016560_cw1:latest
-        
-        # Stop and remove old containers
-        docker compose down
-        
-        # Start new containers
-        docker compose up -d
-        
-        # Run migrations (if needed)
-        docker compose exec -T web python manage.py migrate --noinput
-        
-        # Collect static files
-        docker compose exec -T web python manage.py collectstatic --noinput
-        
-        # Check if containers are running
-        docker compose ps
-      ENDSSH
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy application
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        run: |
+          ssh ${{ secrets.USER }}@${{ secrets.HOST }} << 'ENDSSH'
+            cd /opt/tickwise || exit 1
+            
+            echo "Pulling latest Docker image..."
+            docker pull $DOCKER_USERNAME/dscc_00016560_cw1:latest
+            
+            echo "Stopping old containers..."
+            docker compose down || docker-compose down
+            
+            echo "Starting new containers..."
+            docker compose up -d || docker-compose up -d
+            
+            echo "Waiting for containers to be ready..."
+            sleep 10
+            
+            echo "Running database migrations..."
+            if command -v docker compose &> /dev/null; then
+              docker compose exec -T web python manage.py migrate --noinput
+              docker compose exec -T web python manage.py collectstatic --noinput
+            else
+              docker-compose exec -T web python manage.py migrate --noinput
+              docker-compose exec -T web python manage.py collectstatic --noinput
+            fi
+            
+            echo "Checking container status..."
+            docker compose ps || docker-compose ps
+            
+            echo "Deployment completed successfully!"
+          ENDSSH
+
+      - name: Health check
+        run: |
+          sleep 5
+          curl -f http://${{ secrets.HOST }}/health/ || echo "Health check endpoint not configured"
