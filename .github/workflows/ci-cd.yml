@@ -80,5 +80,18 @@ jobs:
 
     steps:
       - name: Deploy application
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          HOST: ${{ secrets.HOST }}
+          USER: ${{ secrets.USER }}
         run: |
-          echo "Deployment step goes here. Add your deployment script or commands."
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
+
+          ssh $USER@$HOST << 'EOF'
+            docker pull ${{ secrets.DOCKER_USERNAME }}/dscc_00016560_cw1:latest
+            docker-compose down
+            docker-compose up -d
+          EOF
