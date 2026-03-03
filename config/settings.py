@@ -31,7 +31,7 @@ SECRET_KEY = 'django-insecure-hlpsuvvvbxp011m9-+^3u_)-v^f+$z7o=k)9ojfgb$27vex5j*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['tickwise.polandcentral.cloudapp.azure.com']
 
 
 # Application definition
