@@ -56,4 +56,7 @@ services:
       timeout: 5s
       retries: 5
 
-volumes
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
